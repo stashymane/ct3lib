@@ -1,0 +1,11 @@
+[package]
+name = "ct3lib"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+thiserror.workspace = true
+serde.workspace = true
+
+texpresso.workspace = true
+image.workspace = true
