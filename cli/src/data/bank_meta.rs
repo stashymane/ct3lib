@@ -1,5 +1,4 @@
-use ct3lib::data::Compression;
-use ct3lib::Art;
+use ct3lib::data::{Compression, ImageHeader};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
@@ -17,17 +16,16 @@ pub struct ImageMetadata {
 }
 
 impl BankMetadata {
-    pub fn from(name: String, art: &Art) -> Self {
-        let metadata = art
-            .images
-            .iter()
+    pub fn from_headers(name: String, headers: impl IntoIterator<Item = ImageHeader>) -> Self {
+        let metadata = headers
+            .into_iter()
             .enumerate()
-            .map(|(i, img)| {
+            .map(|(i, h)| {
                 (
                     i,
                     ImageMetadata {
-                        compression: img.header.compression,
-                        mip_count: img.header.mip_count,
+                        compression: h.compression,
+                        mip_count: h.mip_count,
                     },
                 )
             })

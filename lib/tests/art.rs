@@ -18,32 +18,31 @@ fn multi_image_art_encode_decode() {
         .map(|&c| image_from_png(SMPTE, c, 1))
         .collect();
 
-    let art = Art { images };
-    let encoded = encode_to_vec(&art);
-    let art2 = Art::decode(encoded.as_slice()).expect("multi-image decode failed");
+    let encoded = encode_to_vec(&images);
+    let decoded: Vec<Image> = Art::decode(encoded.as_slice())
+        .expect("multi-image decode failed")
+        .into_iter()
+        .map(|e| {
+            let e = e.expect("entry error");
+            Image { header: e.header, data: e.data }
+        })
+        .collect();
 
-    assert_eq!(art2.images.len(), compressions.len());
-    for (i, (orig, rt)) in art.images.iter().zip(art2.images.iter()).enumerate() {
-        assert_eq!(
-            orig.header.width, rt.header.width,
-            "image {i} width mismatch"
-        );
-        assert_eq!(
-            orig.header.height, rt.header.height,
-            "image {i} height mismatch"
-        );
-        assert_eq!(
-            orig.header.compression, rt.header.compression,
-            "image {i} compression mismatch"
-        );
+    assert_eq!(decoded.len(), compressions.len());
+    for (i, (orig, rt)) in images.iter().zip(decoded.iter()).enumerate() {
+        assert_eq!(orig.header.width, rt.header.width, "image {i} width mismatch");
+        assert_eq!(orig.header.height, rt.header.height, "image {i} height mismatch");
+        assert_eq!(orig.header.compression, rt.header.compression, "image {i} compression mismatch");
         assert_eq!(orig.data, rt.data, "image {i} data mismatch");
     }
 }
 
 #[test]
 fn empty_art_encode_decode() {
-    let art = Art { images: vec![] };
-    let encoded = encode_to_vec(&art);
-    let art2 = Art::decode(encoded.as_slice()).expect("empty art decode failed");
-    assert_eq!(art2.images.len(), 0);
+    let encoded = encode_to_vec(&[]);
+    let decoded: Vec<_> = Art::decode(encoded.as_slice())
+        .expect("empty art decode failed")
+        .into_iter()
+        .collect();
+    assert_eq!(decoded.len(), 0);
 }

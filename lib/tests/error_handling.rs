@@ -1,5 +1,6 @@
 mod common;
-use ct3lib::{Art, DecodeError};
+use ct3lib::data::DecodeError;
+use ct3lib::Art;
 
 #[test]
 fn decode_error_unexpected_eof() {
@@ -16,8 +17,9 @@ fn decode_error_invalid_magic() {
     data[0] = 1; // count = 1
     data[4] = 8; // ptr[0] = 8
     // magic at offset 8 is all zeros → invalid
+    let mut decoder = Art::decode(data.as_slice()).expect("decoder construction should succeed");
     assert!(matches!(
-        Art::decode(data.as_slice()),
+        decoder.next_entry(),
         Err(DecodeError::InvalidMagic { .. })
     ));
 }
@@ -33,8 +35,9 @@ fn decode_error_unknown_compression() {
     data[8 + 6..8 + 8].copy_from_slice(&1u16.to_le_bytes()); // height=1
     let bad_comp: u32 = (99u32 << 16) | 1;
     data[8 + 12..8 + 16].copy_from_slice(&bad_comp.to_le_bytes());
+    let mut decoder = Art::decode(data.as_slice()).expect("decoder construction should succeed");
     assert!(matches!(
-        Art::decode(data.as_slice()),
+        decoder.next_entry(),
         Err(DecodeError::UnknownCompression { .. })
     ));
 }

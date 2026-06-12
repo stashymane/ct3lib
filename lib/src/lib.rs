@@ -2,63 +2,49 @@ pub mod data;
 pub mod png;
 pub mod util;
 
-pub use data::{ArtDecoder, ArtEncoder};
 use crate::data::{Image, ImageHeader};
+pub use data::{ArtDecoder, ArtDecoderIter, ArtEncoder, DecodeEntry, DecodeError, DecodeResult};
 use std::io::{self, Read, Write};
-use thiserror::Error;
 
-const MAGIC: u32 = u32::from_le_bytes(*b"GXTX");
+pub(crate) const MAGIC: u32 = u32::from_le_bytes(*b"GXTX");
 
-/// Convenience in-memory representation of an ART file.
-#[derive(Debug, Clone)]
-pub struct Art {
-    pub images: Vec<Image>,
-}
-
-#[derive(Debug, Error)]
-pub enum DecodeError {
-    #[error("IO error")]
-    Io(#[from] io::Error),
-    #[error("invalid magic at offset {offset}: got {got}")]
-    InvalidMagic { offset: usize, got: u32 },
-    #[error("unknown compression type: {value}")]
-    UnknownCompression { value: u32 },
-}
+/// Entrypoint for creating ART encoders and decoders.
+///
+/// Use [`Art::decode`] to open an ART stream for reading, or [`Art::encode`]
+/// to write a collection of images into an ART stream.
+pub struct Art;
 
 impl Art {
-    pub fn decode<R: Read>(reader: R) -> Result<Self, DecodeError> {
-        let mut decoder = ArtDecoder::new(reader)?;
-        let mut images = Vec::with_capacity(decoder.len());
-        while let Some((header, mut data_reader)) = decoder.next_entry()? {
-            let mut data = Vec::new();
-            data_reader.read_to_end(&mut data)?;
-            images.push(Image { header, data });
-        }
-        Ok(Art { images })
+    /// Open an ART stream for reading. The file header is read immediately;
+    /// image data is read on demand via the returned [`ArtDecoder`].
+    ///
+    /// # Example
+    /// ```no_run
+    /// use std::fs::File;
+    /// use std::io::BufReader;
+    /// use ct3lib::Art;
+    ///
+    /// let decoder = Art::decode(BufReader::new(File::open("bank.art").unwrap())).unwrap();
+    /// for entry in decoder {
+    ///     let entry = entry.unwrap();
+    ///     println!("{:?}", entry.header);
+    ///     let rgba = entry.decode();
+    /// }
+    /// ```
+    pub fn decode<R: Read>(reader: R) -> DecodeResult<ArtDecoder<R>> {
+        ArtDecoder::new(reader)
     }
 
-    pub fn encode<W: Write>(&self, writer: W) -> io::Result<()> {
-        let entries: Vec<(ImageHeader, usize)> = self
-            .images
+    /// Encode a collection of [`Image`]s into an ART stream.
+    pub fn encode<W: Write>(writer: W, images: &[Image]) -> io::Result<()> {
+        let entries: Vec<(ImageHeader, usize)> = images
             .iter()
             .map(|img| (img.header.clone(), img.data.len()))
             .collect();
         let mut encoder = ArtEncoder::new(writer, entries)?;
-        for img in &self.images {
+        for img in images {
             encoder.write_image(img.data.as_slice())?;
         }
         Ok(())
     }
-}
-
-fn read_u16<R: Read>(reader: &mut R) -> io::Result<u16> {
-    let mut buf = [0u8; 2];
-    reader.read_exact(&mut buf)?;
-    Ok(u16::from_le_bytes(buf))
-}
-
-fn read_u32<R: Read>(reader: &mut R) -> io::Result<u32> {
-    let mut buf = [0u8; 4];
-    reader.read_exact(&mut buf)?;
-    Ok(u32::from_le_bytes(buf))
 }

@@ -1,71 +1,174 @@
-use crate::data::{Compression, ImageHeader};
-use crate::{read_u16, read_u32, DecodeError, MAGIC};
-use std::io::{Read, Take};
+use crate::data::ImageHeader;
+use crate::util::read_u32;
+use std::io;
+use std::io::{Read, Seek, SeekFrom, Take};
+use thiserror::Error;
 
-/// Streaming ART decoder. Reads the file header eagerly; image data is read
-/// on demand by consuming the `Take<R>` returned from [`ArtDecoder::next_entry`].
 pub struct ArtDecoder<R: Read> {
     reader: R,
+    offsets: Vec<usize>,
     remaining: usize,
+    total: usize,
+}
+
+pub type DecodeResult<T> = Result<T, DecodeError>;
+
+#[derive(Debug, Error)]
+pub enum DecodeError {
+    #[error("IO error")]
+    Io(#[from] io::Error),
+    #[error("invalid magic at offset {offset}: got {got}")]
+    InvalidMagic { offset: usize, got: u32 },
+    #[error("unknown compression type: {value}")]
+    UnknownCompression { value: u32 },
+    #[error("index {index} out of bounds")]
+    IndexOutOfBounds { index: usize },
 }
 
 impl<R: Read> ArtDecoder<R> {
     /// Begin decoding an ART stream. Reads the count and pointer table immediately.
-    pub fn new(mut reader: R) -> Result<Self, DecodeError> {
+    pub fn new(mut reader: R) -> DecodeResult<Self> {
         let count = read_u32(&mut reader)? as usize;
-        // Read and discard the pointer table (not needed for sequential reading)
-        let mut ptr_buf = vec![0u8; count * 4];
-        reader.read_exact(&mut ptr_buf)?;
+
+        let mut offsets = Vec::with_capacity(count);
+        for _ in 0..count {
+            let offset = read_u32(&mut reader)? as usize;
+            offsets.push(offset);
+        }
+
         Ok(Self {
             reader,
+            offsets,
             remaining: count,
+            total: count,
         })
     }
 
     /// Total number of images in this ART file.
     pub fn len(&self) -> usize {
-        self.remaining
+        self.total
+    }
+
+    pub fn current(&self) -> usize {
+        self.total - self.remaining
     }
 
     pub fn is_empty(&self) -> bool {
         self.remaining == 0
     }
 
+    pub fn skip(&mut self, count: usize) -> Result<(), DecodeError> {
+        if count > self.remaining {
+            return Err(DecodeError::IndexOutOfBounds {
+                index: self.remaining + count,
+            });
+        }
+        self.remaining -= count;
+        Ok(())
+    }
+
     /// Read the next image header and return it together with a reader limited
     /// to exactly the image's data bytes. The caller **must** fully consume or
     /// drop the `Take<R>` before calling `next_entry` again.
-    pub fn next_entry(&mut self) -> Result<Option<(ImageHeader, Take<&mut R>)>, DecodeError> {
+    pub fn next_entry(&mut self) -> DecodeResult<Option<(ImageHeader, Take<&mut R>)>> {
         if self.remaining == 0 {
             return Ok(None);
         }
 
-        let magic = read_u32(&mut self.reader)?;
-        if magic != MAGIC {
-            return Err(DecodeError::InvalidMagic {
-                offset: 0,
-                got: magic,
-            });
-        }
+        let header = ImageHeader::read_from(&mut self.reader)?;
+        let data_reader = (&mut self.reader).take(header.size as u64);
 
-        let width = read_u16(&mut self.reader)?;
-        let height = read_u16(&mut self.reader)?;
-        let size = read_u32(&mut self.reader)? as u64;
-        let comp_raw = read_u32(&mut self.reader)?;
-
-        let compression = Compression::from_u32(comp_raw)
-            .ok_or(DecodeError::UnknownCompression { value: comp_raw })?;
-        let mip_count = (comp_raw & 0xffff) as u16;
-
-        let header = ImageHeader {
-            width,
-            height,
-            compression,
-            mip_count,
-        };
-        // Use the on-disk size field (not the computed size) so the reader
-        // stays correctly positioned even if the file's size differs.
-        let data_reader = (&mut self.reader).take(size);
         self.remaining -= 1;
         Ok(Some((header, data_reader)))
+    }
+}
+
+impl<R: Read + Seek> ArtDecoder<R> {
+    pub fn header_at(&mut self, index: usize) -> Result<ImageHeader, DecodeError> {
+        let offset = self
+            .offsets
+            .get(index)
+            .ok_or(DecodeError::IndexOutOfBounds { index })?;
+
+        self.reader.seek(SeekFrom::Start(*offset as u64))?;
+        let header = ImageHeader::read_from(&mut self.reader)?;
+
+        Ok(header)
+    }
+
+    pub fn entry_at(&mut self, index: usize) -> Result<(ImageHeader, Take<&mut R>), DecodeError> {
+        let offset = self
+            .offsets
+            .get(index)
+            .ok_or(DecodeError::IndexOutOfBounds { index })?;
+
+        self.reader.seek(SeekFrom::Start(*offset as u64))?;
+        let header = ImageHeader::read_from(&mut self.reader)?;
+        let data_reader = (&mut self.reader).take(header.size as u64);
+
+        Ok((header, data_reader))
+    }
+}
+
+/// An iterator over the entries of an [`ArtDecoder`].
+///
+/// Each item is a [`DecodeEntry`] which exposes the image header and allows
+/// decoding the pixel data on demand via [`DecodeEntry::decode`].
+pub struct ArtDecoderIter<R: Read> {
+    decoder: ArtDecoder<R>,
+}
+
+/// A single entry produced by [`ArtDecoderIter`].
+///
+/// The header is available immediately; call [`DecodeEntry::decode`] to read
+/// and decompress the pixel data.
+pub struct DecodeEntry {
+    pub header: ImageHeader,
+    pub data: Vec<u8>,
+}
+
+impl DecodeEntry {
+    fn as_image(&self) -> crate::data::image::Image {
+        crate::data::image::Image {
+            header: self.header.clone(),
+            data: self.data.clone(),
+        }
+    }
+
+    /// Decode the raw image data into RGBA8 pixels (row-major, top-to-bottom).
+    pub fn decode(&self) -> Vec<u8> {
+        self.as_image().decode()
+    }
+
+    /// Encode the decoded pixels as a PNG file in memory.
+    pub fn to_png(&self) -> Vec<u8> {
+        self.as_image().to_png()
+    }
+}
+
+impl<R: Read> Iterator for ArtDecoderIter<R> {
+    type Item = DecodeResult<DecodeEntry>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.decoder.next_entry() {
+            Ok(Some((header, mut data_reader))) => {
+                let mut data = Vec::new();
+                match data_reader.read_to_end(&mut data) {
+                    Ok(_) => Some(Ok(DecodeEntry { header, data })),
+                    Err(e) => Some(Err(DecodeError::Io(e))),
+                }
+            }
+            Ok(None) => None,
+            Err(e) => Some(Err(e)),
+        }
+    }
+}
+
+impl<R: Read> IntoIterator for ArtDecoder<R> {
+    type Item = DecodeResult<DecodeEntry>;
+    type IntoIter = ArtDecoderIter<R>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        ArtDecoderIter { decoder: self }
     }
 }

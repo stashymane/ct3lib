@@ -1,9 +1,8 @@
 mod common;
 use crate::common::data::{PHILIPS, SMPTE};
-use crate::common::util::image_from_png;
-use common::util::encode_to_vec;
+use crate::common::util::{encode_to_vec, image_from_png};
 use ct3lib::data::{Compression, Image, ImageHeader};
-use ct3lib::{Art, ArtDecoder, ArtEncoder};
+use ct3lib::{Art, ArtEncoder};
 use std::io::Read;
 
 #[test]
@@ -17,10 +16,9 @@ fn streaming_decoder_yields_correct_count() {
     .iter()
     .map(|&c| image_from_png(SMPTE, c, 1))
     .collect();
-    let art = Art { images };
-    let encoded = encode_to_vec(&art);
+    let encoded = encode_to_vec(&images);
 
-    let mut decoder = ArtDecoder::new(encoded.as_slice()).expect("failed to create decoder");
+    let mut decoder = Art::decode(encoded.as_slice()).expect("failed to create decoder");
     assert_eq!(decoder.len(), 3);
     let mut count = 0;
     while let Some((header, mut data_reader)) = decoder.next_entry().expect("next_entry failed") {
@@ -37,18 +35,16 @@ fn streaming_encoder_produces_identical_output() {
         .iter()
         .map(|&c| image_from_png(PHILIPS, c, 1))
         .collect();
-    let art = Art { images };
-    let reference = encode_to_vec(&art);
+    let reference = encode_to_vec(&images);
 
     // Now encode the same images via the streaming API
-    let entries: Vec<(ImageHeader, usize)> = art
-        .images
+    let entries: Vec<(ImageHeader, usize)> = images
         .iter()
         .map(|img| (img.header.clone(), img.data.len()))
         .collect();
     let mut buf = Vec::new();
     let mut encoder = ArtEncoder::new(&mut buf, entries).expect("encoder new failed");
-    for img in &art.images {
+    for img in &images {
         encoder
             .write_image(img.data.as_slice())
             .expect("write_image failed");

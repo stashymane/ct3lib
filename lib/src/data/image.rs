@@ -1,38 +1,5 @@
 use crate::data::compression::Compression;
-
-/// Image metadata without the raw pixel data — used for streaming APIs.
-#[derive(Debug, Clone)]
-pub struct ImageHeader {
-    pub width: u16,
-    pub height: u16,
-    pub compression: Compression,
-    /// Number of mipmap levels (1 = base image only, >1 = mip chain).
-    /// This is the low 16 bits of the raw compression u32 from the file.
-    pub mip_count: u16,
-}
-
-impl ImageHeader {
-    /// Total byte size of all mip levels as stored in the file.
-    pub fn total_data_size(&self) -> usize {
-        let mut size = 0;
-        let mut w = self.width as usize;
-        let mut h = self.height as usize;
-        for _ in 0..self.mip_count {
-            size += self.compression.base_mip_size(w, h);
-            if w == 1 && h == 1 {
-                break;
-            }
-            w = (w / 2).max(1);
-            h = (h / 2).max(1);
-        }
-        size
-    }
-
-    /// The raw u32 compression field value to write into the file.
-    pub fn comp_u32(&self) -> u32 {
-        (self.compression.to_u32() & 0xffff_0000) | self.mip_count as u32
-    }
-}
+use crate::data::ImageHeader;
 
 #[derive(Debug, Clone)]
 pub struct Image {
@@ -42,10 +9,18 @@ pub struct Image {
 }
 
 impl Image {
-    pub fn width(&self) -> u16 { self.header.width }
-    pub fn height(&self) -> u16 { self.header.height }
-    pub fn compression(&self) -> Compression { self.header.compression }
-    pub fn mip_count(&self) -> u16 { self.header.mip_count }
+    pub fn width(&self) -> u16 {
+        self.header.width
+    }
+    pub fn height(&self) -> u16 {
+        self.header.height
+    }
+    pub fn compression(&self) -> Compression {
+        self.header.compression
+    }
+    pub fn mip_count(&self) -> u16 {
+        self.header.mip_count
+    }
 }
 
 impl Image {
@@ -79,7 +54,11 @@ impl Image {
         for _ in 0..self.header.mip_count {
             // Flip vertically (format stores images upside-down)
             let flipped = imageops::flip_vertical(&current);
-            out.extend(self.header.compression.encode(flipped.as_raw(), w as usize, h as usize));
+            out.extend(
+                self.header
+                    .compression
+                    .encode(flipped.as_raw(), w as usize, h as usize),
+            );
             if w == 1 && h == 1 {
                 break;
             }
