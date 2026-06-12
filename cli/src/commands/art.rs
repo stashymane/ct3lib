@@ -46,7 +46,7 @@ pub struct DecodeArgs {
     force: bool,
 }
 
-const METADATA_JSON: &str = "metadata.json";
+const METADATA_FILE: &str = "metadata.toml";
 
 impl ArtArgs {
     pub fn handle(&self) -> anyhow::Result<()> {
@@ -64,13 +64,13 @@ impl ArtArgs {
                     directory
                 );
 
-                let metadata_path = directory.join(METADATA_JSON);
+                let metadata_path = directory.join(METADATA_FILE);
                 ensure!(
                     metadata_path.exists(),
                     "Metadata file does not exist at {:?}",
                     metadata_path
                 );
-                let metadata: BankMetadata = serde_json::from_slice(&read(metadata_path)?)?;
+                let metadata: BankMetadata = toml::from_slice(&read(metadata_path)?)?;
 
                 let output_path = resolve_file_or_cwd(&args.output, || metadata.get_filename())?;
                 ensure!(
@@ -129,9 +129,10 @@ impl ArtArgs {
                     let metadata =
                         BankMetadata::from(bank_name.to_os_string().into_string().unwrap(), &art);
 
-                    let file = File::create(output_dir.join(METADATA_JSON))?;
-                    let writer = BufWriter::new(file);
-                    serde_json::to_writer_pretty(writer, &metadata)?;
+                    let file = File::create(output_dir.join(METADATA_FILE))?;
+                    let mut writer = BufWriter::new(file);
+                    let content = toml::to_string(&metadata)?;
+                    writer.write_all(content.as_ref())?;
                 }
 
                 for (i, image) in art.images.iter().enumerate() {
