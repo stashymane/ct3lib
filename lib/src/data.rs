@@ -1,4 +1,5 @@
 mod compression;
+mod compression_util;
 mod decode;
 mod encode;
 mod image;

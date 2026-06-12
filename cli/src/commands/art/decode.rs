@@ -23,6 +23,7 @@ pub struct DecodeArgs {
 impl DecodeArgs {
     pub fn handle(&self) -> anyhow::Result<()> {
         for file in &self.files {
+            println!("Decoding {:?}...", file);
             self.handle_file(file)?;
         }
 

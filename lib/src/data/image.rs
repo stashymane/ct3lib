@@ -30,14 +30,8 @@ impl Image {
         let w = self.header.width as usize;
         let h = self.header.height as usize;
 
-        // Flip vertically (the format stores images upside-down)
-        let flipped: Vec<u8> = rgba
-            .chunks_exact(w * 4)
-            .rev()
-            .flat_map(|row| row.iter().copied())
-            .collect();
-
-        self.header.compression.encode(&flipped, w, h)
+        // compression.encode handles any needed orientation transform internally
+        self.header.compression.encode(rgba, w, h)
     }
 
     /// Build the full mip chain data for this image given RGBA8 pixels of the base level.
@@ -52,12 +46,11 @@ impl Image {
             .expect("build_mip_chain: invalid base image dimensions");
 
         for _ in 0..self.header.mip_count {
-            // Flip vertically (format stores images upside-down)
-            let flipped = imageops::flip_vertical(&current);
+            // compression.encode handles any needed orientation transform internally
             out.extend(
                 self.header
                     .compression
-                    .encode(flipped.as_raw(), w as usize, h as usize),
+                    .encode(current.as_raw(), w as usize, h as usize),
             );
             if w == 1 && h == 1 {
                 break;
@@ -79,12 +72,7 @@ impl Image {
         // base (mip 0) image before handing it to the decompressor.
         let base_size = self.header.compression.base_mip_size(w, h);
         let base_data = &self.data[..base_size.min(self.data.len())];
-        let raw = self.header.compression.decode(base_data, w, h);
-
-        // The image data is stored upside-down; flip vertically to produce the correct orientation.
-        raw.chunks_exact(w * 4)
-            .rev()
-            .flat_map(|row| row.iter().copied())
-            .collect()
+        // compression.decode returns correctly oriented pixels (handles any needed flip internally)
+        self.header.compression.decode(base_data, w, h)
     }
 }
