@@ -11,7 +11,7 @@ use std::path::PathBuf;
 #[derive(Debug, Args)]
 pub struct DecodeArgs {
     /// ART file to decode from
-    file: PathBuf,
+    files: Vec<PathBuf>,
     /// Directory to decode the contents into. Defaults to the current working directory.
     #[arg(short)]
     output_dir: Option<PathBuf>,
@@ -22,7 +22,14 @@ pub struct DecodeArgs {
 
 impl DecodeArgs {
     pub fn handle(&self) -> anyhow::Result<()> {
-        let file = &self.file;
+        for file in &self.files {
+            self.handle_file(file)?;
+        }
+
+        Ok(())
+    }
+
+    fn handle_file(&self, file: &PathBuf) -> anyhow::Result<()> {
         ensure!(file.exists(), "File {:?} does not exist.", file);
         ensure!(!file.is_dir(), "Path {:?} cannot be a directory.", file);
 
