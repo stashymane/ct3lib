@@ -1,0 +1,40 @@
+name: Build CLI
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+      - run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
+      - uses: rui314/setup-mold@v1
+
+      - name: Run tests
+        run: cargo test
+
+      - name: Build Debug
+        run: cargo build --package cli
+
+      - name: Build Release
+        run: cargo build --release --package cli
+
+      - name: Upload Debug Artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: ct3lib-cli-debug
+          path: target/debug/ct3lib-cli
+
+      - name: Upload Release Artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: ct3lib-cli-release
+          path: target/release/ct3lib-cli
