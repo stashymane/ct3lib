@@ -12,7 +12,7 @@ use std::path::PathBuf;
 pub struct DecodeArgs {
     /// ART file to decode from
     files: Vec<PathBuf>,
-    /// Directory to decode the contents into. Defaults to the current working directory.
+    /// Project directory that the files will be decoded into
     #[arg(short)]
     output_dir: Option<PathBuf>,
     /// Overwrite any existing files
@@ -26,6 +26,8 @@ impl DecodeArgs {
             println!("Decoding {:?}...", file);
             self.handle_file(file)?;
         }
+
+        println!("Done!");
 
         Ok(())
     }

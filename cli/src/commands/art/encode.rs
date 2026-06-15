@@ -11,9 +11,9 @@ use std::path::{Path, PathBuf};
 
 #[derive(Debug, Args)]
 pub struct EncodeArgs {
-    /// Directory to encode the file from
-    directory: PathBuf,
-    /// ART file path to output. Defaults to the current working directory.
+    /// Directories to encode into ART files
+    directories: Vec<PathBuf>,
+    /// ART file path to output
     #[arg(short)]
     output: Option<PathBuf>,
     /// Overwrite existing files
@@ -23,8 +23,17 @@ pub struct EncodeArgs {
 
 impl EncodeArgs {
     pub fn handle(&self) -> anyhow::Result<()> {
-        let directory = &self.directory;
+        for dir in &self.directories {
+            println!("Encoding {:?}...", dir);
+            self.handle_directory(dir)?;
+        }
 
+        println!("Done!");
+
+        Ok(())
+    }
+
+    pub fn handle_directory(&self, directory: &PathBuf) -> anyhow::Result<()> {
         ensure!(
             directory.exists(),
             "Directory {:?} does not exist.",
