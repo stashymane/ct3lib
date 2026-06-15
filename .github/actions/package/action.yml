@@ -19,10 +19,10 @@ runs:
   steps:
     - name: Build binary
       shell: bash
-      run: cargo build --package ${{ inputs.package }} --target ${{ inputs.target }}${{ (inputs.release && ' --release') || '' }}
+      run: cargo build --package ${{ inputs.package }} --target ${{ inputs.target }}${{ (inputs.release == 'true' && ' --release') || '' }}
 
     - name: Upload artifact
       uses: actions/upload-artifact@v7
       with:
-        name: ${{ inputs.package }}-${{ inputs.target }}-${{ (inputs.release && 'release') || 'debug' }}
-        path: target/${{ inputs.target }}/${{ (inputs.release && 'release') || 'debug' }}/${{ inputs.package }}${{ (contains(inputs.target, 'windows') && '.exe') || '' }}
+        name: ${{ inputs.package }}-${{ inputs.target }}-${{ (inputs.release == 'true' && 'release') || 'debug' }}
+        path: target/${{ inputs.target }}/${{ (inputs.release == 'true' && 'release') || 'debug' }}/${{ inputs.package }}${{ (contains(inputs.target, 'windows') && '.exe') || '' }}
