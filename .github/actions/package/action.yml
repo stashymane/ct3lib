@@ -1,4 +1,4 @@
-name: Package ${{ inputs.package }}
+name: Package binary
 author: aesth
 
 inputs:
