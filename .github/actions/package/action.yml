@@ -1,0 +1,29 @@
+name: Package Rust binary
+author: aesth
+
+inputs:
+  package:
+    description: "Name of the package to build"
+    required: true
+  target:
+    required: true
+    description: The target to build for
+  release:
+    default: "false"
+    required: true
+    description: "Whether to build a release binary"
+
+runs:
+  name: ${{ inputs.package }} ${{ (inputs.release && 'release') || 'debug' }} ${{ inputs.target }}
+  using: composite
+
+  steps:
+    - name: Build binary
+      shell: bash
+      run: cargo build --package ${{ inputs.package }} --target ${{ inputs.target }}${{ (inputs.release && ' --release') || '' }}
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v7
+      with:
+        name: ${{ inputs.name }}/${{ inputs.target }}/${{ (inputs.release && 'release') || 'debug' }}
+        path: target/${{ inputs.target }}/${{ (inputs.release && 'release') || 'debug' }}/${{ inputs.package }}${{ (contains(inputs.target, 'windows') && '.exe') || '' }}

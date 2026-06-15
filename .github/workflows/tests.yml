@@ -1,0 +1,28 @@
+on:
+  workflow_call:
+    inputs:
+      target:
+        type: string
+        required: true
+
+      os:
+        type: string
+        default: ubuntu-latest
+
+jobs:
+  package:
+    runs-on: ${{ inputs.os }}
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: moonrepo/setup-rust@v1
+        with:
+          targets: ${{ inputs.target }}
+          inherit-toolchain: true
+          cache-extra-identifier: ${{ inputs.os }}-${{ inputs.target }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run tests
+        run: cargo test --target ${{ inputs.target }}

@@ -1,0 +1,36 @@
+name: Build CLI
+
+on:
+  push:
+    branches: [ "master" ]
+    paths-ignore:
+      - .github
+      - .gitignore
+      - README.md
+  pull_request:
+    branches: [ "master" ]
+  workflow_dispatch: { }
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    name: Run tests
+    strategy:
+      matrix:
+        target: [ "x86_64-unknown-linux-gnu" ]
+    uses: ./.github/workflows/tests.yml
+    with:
+      target: ${{ matrix.target }}
+
+  build:
+    name: Package CLI
+    needs: test
+    strategy:
+      matrix:
+        target: [ "x86_64-unknown-linux-gnu", "x86_64-pc-windows-gnu" ]
+    uses: ./.github/workflows/package.yml
+    with:
+      package: 'ct3lib-cli'
+      target: ${{ matrix.target }}

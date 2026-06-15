@@ -1,0 +1,42 @@
+on:
+  workflow_call:
+    inputs:
+      package:
+        type: string
+        required: true
+      target:
+        type: string
+        required: true
+
+      os:
+        type: string
+        default: ubuntu-latest
+
+jobs:
+  package:
+    runs-on: ${{ inputs.os }}
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: moonrepo/setup-rust@v1
+        with:
+          targets: ${{ inputs.target }}
+          inherit-toolchain: true
+          cache-extra-identifier: ${{ inputs.os }}-${{ inputs.target }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Package debug
+        uses: ./.github/actions/package
+        with:
+          package: ${{ inputs.package }}
+          target: ${{ inputs.target }}
+          release: false
+
+      - name: Package release
+        uses: ./.github/actions/package
+        with:
+          package: ${{ inputs.package }}
+          target: ${{ inputs.target }}
+          release: true
