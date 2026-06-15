@@ -25,5 +25,5 @@ runs:
     - name: Upload artifact
       uses: actions/upload-artifact@v7
       with:
-        name: ${{ inputs.name }}/${{ inputs.target }}/${{ (inputs.release && 'release') || 'debug' }}
+        name: ${{ inputs.package }}/${{ inputs.target }}/${{ (inputs.release && 'release') || 'debug' }}
         path: target/${{ inputs.target }}/${{ (inputs.release && 'release') || 'debug' }}/${{ inputs.package }}${{ (contains(inputs.target, 'windows') && '.exe') || '' }}
