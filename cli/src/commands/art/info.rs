@@ -1,7 +1,7 @@
 use anyhow::{ensure, Context};
 use clap::Args;
-use ct3lib::data::ImageHeader;
-use ct3lib::Art;
+use ct3lib::art::image_header::ImageHeader;
+use ct3lib::art::Art;
 use std::fs::File;
 use std::io::BufReader;
 use std::path::PathBuf;

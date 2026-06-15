@@ -1,5 +1,5 @@
-use crate::data::compression::Compression;
-use crate::data::ImageHeader;
+use crate::art::compression::Compression;
+use crate::art::image_header::ImageHeader;
 
 #[derive(Debug, Clone)]
 pub struct Image {
@@ -24,13 +24,10 @@ impl Image {
 }
 
 impl Image {
-    /// Encode RGBA8 pixels (row-major, top-to-bottom) into the image's compression format,
-    /// flipping vertically to match the upside-down storage convention.
     pub fn encode_rgba(&self, rgba: &[u8]) -> Vec<u8> {
         let w = self.header.width as usize;
         let h = self.header.height as usize;
 
-        // compression.encode handles any needed orientation transform internally
         self.header.compression.encode(rgba, w, h)
     }
 
@@ -46,7 +43,6 @@ impl Image {
             .expect("build_mip_chain: invalid base image dimensions");
 
         for _ in 0..self.header.mip_count {
-            // compression.encode handles any needed orientation transform internally
             out.extend(
                 self.header
                     .compression
@@ -64,15 +60,14 @@ impl Image {
         out
     }
 
-    /// Decode the image data into RGBA8 pixels (row-major, top-to-bottom)
+    /// Decode the image data into RGBA8 pixels
     pub fn decode(&self) -> Vec<u8> {
         let w = self.header.width as usize;
         let h = self.header.height as usize;
-        // When mip_count > 1 the data contains a mip chain; slice off only the
-        // base (mip 0) image before handing it to the decompressor.
+
         let base_size = self.header.compression.base_mip_size(w, h);
         let base_data = &self.data[..base_size.min(self.data.len())];
-        // compression.decode returns correctly oriented pixels (handles any needed flip internally)
+
         self.header.compression.decode(base_data, w, h)
     }
 }

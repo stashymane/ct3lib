@@ -2,8 +2,9 @@ use crate::commands::art::{resolve_file_or_cwd, METADATA_FILE};
 use crate::data::bank_meta::BankMetadata;
 use anyhow::ensure;
 use clap::Args;
-use ct3lib::data::Image;
-use ct3lib::Art;
+use ct3lib::art::image::Image;
+use ct3lib::art::Art;
+use log::warn;
 use std::fs::{read, File};
 use std::io::BufWriter;
 use std::path::{Path, PathBuf};
@@ -52,14 +53,26 @@ impl EncodeArgs {
         let mut images: Vec<Image> = Vec::new();
 
         for (i, img_meta) in &metadata.metadata {
-            let png_path = directory.join(format!("{}.png", i));
+            let dds_path = directory.join(format!("{}.dds", i));
             ensure!(
-                png_path.exists(),
-                "PNG file does not exist at {:?}",
-                png_path
+                dds_path.exists(),
+                "DDS file does not exist at {:?}",
+                dds_path
             );
-            images.push(Image::from_png(
-                Path::new(&png_path),
+
+            let dds_bytes = read(&dds_path)?;
+            if let Some(dds_compression) = Image::compression_from_dds_bytes(&dds_bytes) {
+                if dds_compression != img_meta.compression {
+                    warn!(
+                        "Image {i}: DDS pixel format ({:?}) does not match metadata compression ({:?}). \
+                         Re-encoding as {:?}.",
+                        dds_compression, img_meta.compression, img_meta.compression
+                    );
+                }
+            }
+
+            images.push(Image::from_dds(
+                Path::new(&dds_path),
                 img_meta.compression,
                 img_meta.mip_count,
             )?);

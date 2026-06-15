@@ -1,8 +1,11 @@
 mod common;
 use crate::common::data::{PHILIPS, SMPTE};
 use crate::common::util::{encode_to_vec, image_from_png};
-use ct3lib::data::{Compression, Image, ImageHeader};
-use ct3lib::{Art, ArtEncoder};
+use ct3lib::art::compression::Compression;
+use ct3lib::art::encoder::ArtEncoder;
+use ct3lib::art::image::Image;
+use ct3lib::art::image_header::ImageHeader;
+use ct3lib::art::Art;
 use std::io::Read;
 
 #[test]

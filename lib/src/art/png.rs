@@ -1,4 +1,6 @@
-use crate::data::{Compression, Image, ImageHeader};
+use crate::art::compression::Compression;
+use crate::art::image::Image;
+use crate::art::image_header::ImageHeader;
 use image::ImageReader;
 use std::io;
 use std::io::Cursor;
@@ -14,18 +16,6 @@ pub enum PngError {
 }
 
 impl Image {
-    /// Encode the decoded RGBA8 pixels as a PNG file in memory
-    pub fn to_png(&self) -> Vec<u8> {
-        let rgba = self.decode();
-        let img =
-            image::RgbaImage::from_raw(self.header.width as u32, self.header.height as u32, rgba)
-                .expect("failed to create image buffer");
-        let mut buf = Vec::new();
-        img.write_to(&mut Cursor::new(&mut buf), image::ImageFormat::Png)
-            .expect("png encode");
-        buf
-    }
-
     pub fn from_png_bytes(
         data: &[u8],
         compression: Compression,

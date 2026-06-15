@@ -2,7 +2,7 @@ mod common;
 
 use crate::common::data::{PHILIPS, SMPTE};
 use crate::common::util::{image_from_png, roundtrip};
-use ct3lib::data::Compression;
+use ct3lib::art::compression::Compression;
 
 #[test]
 fn encode_decode_mip_chain_r5g6b5() {

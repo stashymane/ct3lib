@@ -2,8 +2,9 @@ mod common;
 
 use crate::common::data::SMPTE;
 use crate::common::util::{encode_to_vec, image_from_png};
-use ct3lib::data::{Compression, Image};
-use ct3lib::Art;
+use ct3lib::art::compression::Compression;
+use ct3lib::art::image::Image;
+use ct3lib::art::Art;
 
 #[test]
 fn multi_image_art_encode_decode() {
@@ -24,15 +25,27 @@ fn multi_image_art_encode_decode() {
         .into_iter()
         .map(|e| {
             let e = e.expect("entry error");
-            Image { header: e.header, data: e.data }
+            Image {
+                header: e.header,
+                data: e.data,
+            }
         })
         .collect();
 
     assert_eq!(decoded.len(), compressions.len());
     for (i, (orig, rt)) in images.iter().zip(decoded.iter()).enumerate() {
-        assert_eq!(orig.header.width, rt.header.width, "image {i} width mismatch");
-        assert_eq!(orig.header.height, rt.header.height, "image {i} height mismatch");
-        assert_eq!(orig.header.compression, rt.header.compression, "image {i} compression mismatch");
+        assert_eq!(
+            orig.header.width, rt.header.width,
+            "image {i} width mismatch"
+        );
+        assert_eq!(
+            orig.header.height, rt.header.height,
+            "image {i} height mismatch"
+        );
+        assert_eq!(
+            orig.header.compression, rt.header.compression,
+            "image {i} compression mismatch"
+        );
         assert_eq!(orig.data, rt.data, "image {i} data mismatch");
     }
 }

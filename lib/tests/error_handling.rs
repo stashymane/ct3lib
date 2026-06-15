@@ -1,6 +1,7 @@
+use ct3lib::art::decoder::DecodeError;
+use ct3lib::art::Art;
+
 mod common;
-use ct3lib::data::DecodeError;
-use ct3lib::Art;
 
 #[test]
 fn decode_error_unexpected_eof() {

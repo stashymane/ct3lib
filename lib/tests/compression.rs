@@ -2,7 +2,7 @@ mod common;
 
 use crate::common::data::{PHILIPS, SMPTE};
 use crate::common::util::{image_from_png, roundtrip};
-use ct3lib::data::Compression;
+use ct3lib::art::compression::Compression;
 
 #[test]
 fn encode_decode_r5g6b5() {
@@ -46,11 +46,24 @@ fn encode_decode_a1r5g5b5() {
 }
 
 #[test]
-fn encode_decode_x1r5g5b5() {
-    let img = image_from_png(PHILIPS, Compression::X1R5G5B5, 1);
+fn encode_decode_l8() {
+    let img = image_from_png(PHILIPS, Compression::L8, 1);
     let (orig, rt) = roundtrip(img);
-    assert_eq!(rt.header.compression, Compression::X1R5G5B5);
-    assert_eq!(orig.data, rt.data, "X1R5G5B5 data mismatch after roundtrip");
+    assert_eq!(rt.header.compression, Compression::L8);
+    assert_eq!(orig.data, rt.data, "L8 data mismatch after roundtrip");
+    let rgba = rt.decode();
+    assert_eq!(
+        rgba.len(),
+        rt.header.width as usize * rt.header.height as usize * 4
+    );
+}
+
+#[test]
+fn encode_decode_a8l8() {
+    let img = image_from_png(PHILIPS, Compression::A8L8, 1);
+    let (orig, rt) = roundtrip(img);
+    assert_eq!(rt.header.compression, Compression::A8L8);
+    assert_eq!(orig.data, rt.data, "A8L8 data mismatch after roundtrip");
     let rgba = rt.decode();
     assert_eq!(
         rgba.len(),
@@ -97,11 +110,24 @@ fn encode_decode_dxt3() {
 }
 
 #[test]
-fn encode_decode_dxt3alt() {
-    let img = image_from_png(SMPTE, Compression::DXT3Alt, 1);
+fn encode_decode_dxt2() {
+    let img = image_from_png(SMPTE, Compression::DXT2, 1);
     let (orig, rt) = roundtrip(img);
-    assert_eq!(rt.header.compression, Compression::DXT3Alt);
-    assert_eq!(orig.data, rt.data, "DXT3Alt data mismatch after roundtrip");
+    assert_eq!(rt.header.compression, Compression::DXT2);
+    assert_eq!(orig.data, rt.data, "DXT2 data mismatch after roundtrip");
+    let rgba = rt.decode();
+    assert_eq!(
+        rgba.len(),
+        rt.header.width as usize * rt.header.height as usize * 4
+    );
+}
+
+#[test]
+fn encode_decode_dxt5() {
+    let img = image_from_png(SMPTE, Compression::DXT5, 1);
+    let (orig, rt) = roundtrip(img);
+    assert_eq!(rt.header.compression, Compression::DXT5);
+    assert_eq!(orig.data, rt.data, "DXT5 data mismatch after roundtrip");
     let rgba = rt.decode();
     assert_eq!(
         rgba.len(),
@@ -135,7 +161,7 @@ fn encode_decode_paletted() {
         buf
     };
 
-    let compression = Compression::Paletted { n_palettes: 1 };
+    let compression = Compression::P8 { n_palettes: 1 };
     let img = image_from_png(&png_bytes, compression, 1);
     let (orig, rt) = roundtrip(img);
     assert_eq!(rt.header.compression, compression);
@@ -147,16 +173,27 @@ fn encode_decode_paletted() {
 #[test]
 fn compression_roundtrip_values() {
     let variants = [
-        Compression::A4R4G4B4,
-        Compression::X1R5G5B5,
         Compression::A1R5G5B5,
+        Compression::A4R4G4B4,
+        Compression::A8,
+        Compression::L8,
+        Compression::A8L8,
         Compression::R5G6B5,
         Compression::A8R8G8B8,
+        Compression::X8R8G8B8,
+        Compression::V8U8,
+        Compression::L6V5U5,
         Compression::DXT1,
         Compression::DXT3,
-        Compression::DXT3Alt,
-        Compression::Paletted { n_palettes: 1 },
-        Compression::Paletted { n_palettes: 3 },
+        Compression::DXT5,
+        Compression::DXT2,
+        Compression::DXT4,
+        Compression::P8 { n_palettes: 1 },
+        Compression::P8 { n_palettes: 3 },
+        Compression::UYVY,
+        Compression::D24S8,
+        Compression::UNKNOWN,
+        Compression::D16,
     ];
     for &c in &variants {
         let v = c.to_u32();

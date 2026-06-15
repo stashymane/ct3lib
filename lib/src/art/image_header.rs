@@ -1,6 +1,7 @@
-use crate::data::{Compression, DecodeError, DecodeResult};
+use crate::art::compression::Compression;
+use crate::art::decoder::{DecodeError, DecodeResult};
+use crate::art::MAGIC;
 use crate::util::{read_u16, read_u32};
-use crate::MAGIC;
 use std::io::Read;
 
 /// Image metadata without the raw pixel data — used for streaming APIs.

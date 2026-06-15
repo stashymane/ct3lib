@@ -1,4 +1,5 @@
-use ct3lib::data::{Compression, ImageHeader};
+use ct3lib::art::compression::Compression;
+use ct3lib::art::image_header::ImageHeader;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 

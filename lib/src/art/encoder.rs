@@ -1,5 +1,5 @@
-use crate::data::ImageHeader;
-use crate::MAGIC;
+use crate::art::image_header::ImageHeader;
+use crate::art::MAGIC;
 use std::io;
 use std::io::{Read, Write};
 

@@ -1,4 +1,5 @@
-use crate::data::ImageHeader;
+use crate::art::image::Image;
+use crate::art::image_header::ImageHeader;
 use crate::util::read_u32;
 use std::io;
 use std::io::{Read, Seek, SeekFrom, Take};
@@ -128,8 +129,8 @@ pub struct DecodeEntry {
 }
 
 impl DecodeEntry {
-    fn as_image(&self) -> crate::data::image::Image {
-        crate::data::image::Image {
+    pub(crate) fn as_image(&self) -> Image {
+        Image {
             header: self.header.clone(),
             data: self.data.clone(),
         }
@@ -138,11 +139,6 @@ impl DecodeEntry {
     /// Decode the raw image data into RGBA8 pixels (row-major, top-to-bottom).
     pub fn decode(&self) -> Vec<u8> {
         self.as_image().decode()
-    }
-
-    /// Encode the decoded pixels as a PNG file in memory.
-    pub fn to_png(&self) -> Vec<u8> {
-        self.as_image().to_png()
     }
 }
 

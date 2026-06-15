@@ -2,7 +2,7 @@ use crate::commands::art::METADATA_FILE;
 use crate::data::bank_meta::BankMetadata;
 use anyhow::{ensure, Context};
 use clap::Args;
-use ct3lib::Art;
+use ct3lib::art::Art;
 use std::env::current_dir;
 use std::fs::{create_dir_all, File};
 use std::io::{BufReader, BufWriter, Write};
@@ -60,11 +60,16 @@ impl DecodeArgs {
             let entry = entry?;
             headers.push(entry.header.clone());
 
-            let png = entry.to_png();
+            let dds = entry.to_dds().ok_or_else(|| {
+                anyhow::anyhow!(
+                    "Image {i} uses compression {:?} which cannot be represented as DDS",
+                    entry.header.compression
+                )
+            })?;
 
-            let file = File::create(output_dir.join(format!("{}.png", i)))?;
+            let file = File::create(output_dir.join(format!("{}.dds", i)))?;
             let mut writer = BufWriter::new(file);
-            writer.write_all(&png)?;
+            writer.write_all(&dds)?;
         }
 
         let metadata =
