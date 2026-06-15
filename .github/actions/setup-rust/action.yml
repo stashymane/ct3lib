@@ -1,0 +1,30 @@
+name: Set up Rust toolchain
+author: aesth
+
+inputs:
+  target:
+    required: true
+    description: The target to build for
+
+runs:
+  using: composite
+
+  steps:
+    - uses: moonrepo/setup-rust@v1
+      with:
+        targets: ${{ inputs.target }}
+        inherit-toolchain: true
+        cache-extra-identifier: ${{ runner.os }}-${{ inputs.target }}
+
+    - uses: rui314/setup-mold@v1
+      if: runner.os == 'Linux'
+
+    - name: Install mingw x64
+      if: runner.os == 'Linux' && inputs.target == 'x86_64-pc-windows-gnu'
+      run: sudo apt-get install -y --no-install-recommends binutils-mingw-w64 g++-mingw-w64 gcc-mingw-w64
+      shell: bash
+
+    - name: Install mingw x86
+      if: runner.os == 'Linux' && matrix.target == 'i686-pc-windows-gnu'
+      run: sudo apt-get install -y --no-install-recommends gcc-mingw-w64-i686
+      shell: bash

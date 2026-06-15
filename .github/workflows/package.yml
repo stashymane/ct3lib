@@ -18,15 +18,11 @@ jobs:
     runs-on: ${{ inputs.os }}
 
     steps:
-      - uses: moonrepo/setup-rust@v1
+      - uses: ./.github/actions/setup-rust
         with:
-          targets: ${{ inputs.target }}
-          inherit-toolchain: true
-          cache-extra-identifier: ${{ inputs.os }}-${{ inputs.target }}
+          target: ${{ inputs.target }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - uses: rui314/setup-mold@v1
-        if: runner.os == 'Linux'
 
       - uses: actions/checkout@v6
 
