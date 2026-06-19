@@ -34,7 +34,7 @@ jobs:
     name: Package binaries
     runs-on: ${{ inputs.os }}
     concurrency:
-      group: build-${{ inputs.os }}-${{ inputs.target }}-${{ (inputs.release == 'true' && 'release') || 'debug' }}
+      group: build-${{ inputs.os }}-${{ inputs.target }}-${{ (inputs.release == true && 'release') || 'debug' }}
 
     outputs:
       artifact-id: ${{ steps.upload.outputs.artifact-id }}
@@ -47,17 +47,17 @@ jobs:
       - uses: ./.github/actions/setup-rust
         with:
           target: ${{ inputs.target }}
-          profile: ${{ (inputs.release == 'true' && 'release') || 'debug' }}
+          profile: ${{ (inputs.release == true && 'release') || 'debug' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build binary
         shell: bash
-        run: cargo build --package ${{ inputs.package }} --target ${{ inputs.target }}${{ (inputs.release == 'true' && ' --release') || '' }}
+        run: cargo build --package ${{ inputs.package }} --target ${{ inputs.target }}${{ (inputs.release == true && ' --release') || '' }}
 
       - name: Upload artifact
         id: upload
         uses: actions/upload-artifact@v7
         with:
-          name: ${{ inputs.package }}-${{ inputs.target }}-${{ (inputs.release == 'true' && 'release') || 'debug' }}
-          path: target/${{ inputs.target }}/${{ (inputs.release == 'true' && 'release') || 'debug' }}/${{ inputs.package }}${{ (contains(inputs.target, 'windows') && '.exe') || '' }}
+          name: ${{ inputs.package }}-${{ inputs.target }}-${{ (inputs.release == true && 'release') || 'debug' }}
+          path: target/${{ inputs.target }}/${{ (inputs.release == true && 'release') || 'debug' }}/${{ inputs.package }}${{ (contains(inputs.target, 'windows') && '.exe') || '' }}
