@@ -5,6 +5,9 @@ inputs:
   target:
     required: true
     description: The target to build for
+  profile:
+    required: true
+    description: Which profile to cache
   cache-identifier:
     required: false
     description: The identifier to use for caching
@@ -17,7 +20,8 @@ runs:
       with:
         targets: ${{ inputs.target }}
         inherit-toolchain: true
-        cache-extra-identifier: ${{ inputs.cache-identifier }}
+        cache-target: ${{ inputs.profile }}
+        cache-extra-identifier: ${{ runner.os }}-${{ inputs.target }}-${{ inputs.profile }}-${{ inputs.cache-identifier || 'default' }}
 
     - uses: rui314/setup-mold@v1
       if: runner.os == 'Linux'
