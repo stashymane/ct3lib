@@ -15,11 +15,12 @@ jobs:
     runs-on: ${{ inputs.os }}
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: ./.github/actions/setup-rust
         with:
           target: ${{ inputs.target }}
+          cache-identifier: ${{ inputs.os }}-${{ inputs.target }}-test
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

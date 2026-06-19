@@ -1,0 +1,59 @@
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      version:
+        type: string
+        description: Version name
+        required: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    uses: ./.github/workflows/package.yml
+    with:
+      package: 'ct3lib-cli'
+      target: ${{ matrix.target }}
+      release: true
+
+    strategy:
+      matrix:
+        target: [ "x86_64-unknown-linux-gnu", "x86_64-pc-windows-gnu" ]
+
+  release:
+    runs-on: ubuntu-latest
+    needs: package
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Download package artifacts
+        uses: actions/download-artifact@v8
+        with:
+          pattern: ct3lib-cli-*-release
+          path: dist
+          merge-multiple: true
+
+      - name: Create draft GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          read -r -d '' RELEASE_NOTES <<'EOF'
+          > [!NOTE]
+          > Not sure how to use? [Check the usage notes](https://github.com/stashymane/ct3lib#setup--usage).
+          > For any questions or issues, feel free to start [a new discussion](https://github.com/stashymane/ct3lib/discussions).
+          EOF
+          
+          gh release create "${{ inputs.version || github.ref_name }}" \
+            --draft \
+            --title "${{ inputs.version || github.ref_name }}" \
+            --generate-notes \
+            --notes "$RELEASE_NOTES" \
+            "dist/*"

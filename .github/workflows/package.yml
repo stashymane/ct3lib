@@ -2,40 +2,60 @@ on:
   workflow_call:
     inputs:
       package:
+        description: "Name of the package to build"
         type: string
         required: true
       target:
+        description: "The target to build for"
         type: string
         required: true
+      release:
+        description: "Whether to build a release binary"
+        type: boolean
+        default: false
 
       os:
         type: string
         default: ubuntu-latest
+    
+    outputs:
+      artifact-id:
+        value: ${{ jobs.package.outputs.artifact-id }}
+      artifact-url:
+        description: The URL of the uploaded artifact
+        value: ${{ jobs.package.outputs.artifact-url }}
+      artifact-digest:
+        description: The digest of the uploaded artifact
+        value: ${{ jobs.package.outputs.artifact-digest }}
+
 
 jobs:
   package:
     name: Package binaries
     runs-on: ${{ inputs.os }}
 
+    outputs:
+      artifact-id: ${{ steps.upload.outputs.artifact-id }}
+      artifact-url: ${{ steps.upload.outputs.artifact-url }}
+      artifact-digest: ${{ steps.upload.outputs.artifact-digest }}
+
     steps:
-      - uses: actions/checkout@v6
-        
+      - uses: actions/checkout@v7
+
       - uses: ./.github/actions/setup-rust
         with:
           target: ${{ inputs.target }}
+          cache-identifier: ${{ runner.os }}-${{ inputs.target }}-${{ (inputs.release == 'true' && 'release') || 'debug' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Package debug
-        uses: ./.github/actions/package
-        with:
-          package: ${{ inputs.package }}
-          target: ${{ inputs.target }}
-          release: false
+      - name: Build binary
+        shell: bash
+        run: cargo build --package ${{ inputs.package }} --target ${{ inputs.target }}${{ (inputs.release == 'true' && ' --release') || '' }}
 
-      - name: Package release
-        uses: ./.github/actions/package
+      - name: Upload artifact
+        id: upload
+        uses: actions/upload-artifact@v7
         with:
-          package: ${{ inputs.package }}
-          target: ${{ inputs.target }}
-          release: true
+          name: ${{ inputs.package }}-${{ inputs.target }}-${{ (inputs.release == 'true' && 'release') || 'debug' }}
+          path: target/${{ inputs.target }}/${{ (inputs.release == 'true' && 'release') || 'debug' }}/${{ inputs.package }}${{ (contains(inputs.target, 'windows') && '.exe') || '' }}

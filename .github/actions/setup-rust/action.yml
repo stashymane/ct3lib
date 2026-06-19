@@ -5,6 +5,9 @@ inputs:
   target:
     required: true
     description: The target to build for
+  cache-identifier:
+    required: false
+    description: The identifier to use for caching
 
 runs:
   using: composite
@@ -14,7 +17,7 @@ runs:
       with:
         targets: ${{ inputs.target }}
         inherit-toolchain: true
-        cache-extra-identifier: ${{ runner.os }}-${{ inputs.target }}
+        cache-extra-identifier: ${{ inputs.cache-identifier }}
 
     - uses: rui314/setup-mold@v1
       if: runner.os == 'Linux'
@@ -25,6 +28,6 @@ runs:
       shell: bash
 
     - name: Install mingw x86
-      if: runner.os == 'Linux' && matrix.target == 'i686-pc-windows-gnu'
+      if: runner.os == 'Linux' && inputs.target == 'i686-pc-windows-gnu'
       run: sudo apt-get install -y --no-install-recommends gcc-mingw-w64-i686
       shell: bash
