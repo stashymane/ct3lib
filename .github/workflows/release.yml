@@ -36,9 +36,24 @@ jobs:
       - name: Download package artifacts
         uses: actions/download-artifact@v8
         with:
-          pattern: ct3lib-cli-*-release
-          path: dist
-          merge-multiple: true
+          pattern: '*-release'
+          path: artifacts
+
+      - name: Rename artifacts for release
+        run: |
+          mkdir -p dist
+
+          for artifact_dir in artifacts/*; do
+            artifact_name="$(basename "$artifact_dir")"
+            packaged_file="$(find "$artifact_dir" -type f | head -n 1)"
+            extension="${packaged_file##*.}"
+
+            if [ "$packaged_file" != "$extension" ]; then
+              cp "$packaged_file" "dist/$artifact_name.$extension"
+            else
+              cp "$packaged_file" "dist/$artifact_name"
+            fi
+          done
 
       - name: Create draft GitHub release
         env:
