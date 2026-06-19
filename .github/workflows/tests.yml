@@ -14,7 +14,7 @@ jobs:
     name: Run tests
     runs-on: ${{ inputs.os }}
     concurrency:
-      group: build-${{ runner.os }}-${{ inputs.target }}-debug
+      group: build-${{ inputs.os }}-${{ inputs.target }}-debug
 
     steps:
       - uses: actions/checkout@v7
