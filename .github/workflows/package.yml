@@ -34,7 +34,7 @@ jobs:
     name: Package binaries
     runs-on: ${{ inputs.os }}
     concurrency:
-      group: build-${{ runner.os }}-${{ inputs.target }}-${{ (inputs.release == 'true' && 'release') || 'debug' }}
+      group: build-${{ inputs.os }}-${{ inputs.target }}-${{ (inputs.release == 'true' && 'release') || 'debug' }}
 
     outputs:
       artifact-id: ${{ steps.upload.outputs.artifact-id }}
